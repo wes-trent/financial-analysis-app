@@ -13,8 +13,14 @@ import os
 # Add a title to the Streamlit app
 st.title("Financial Analysis App")
 
-# API key
-API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
+if 'ALPHA_VANTAGE_API_KEY' in os.environ:
+    # Running locally, fetch from environment variables
+    API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
+elif 'api' in st.secrets:
+    # Running on Streamlit, fetch from secrets
+    API_KEY = st.secrets["api"]["key"]
+else:
+    raise Exception("API key not found")
 
 @st.cache_resource
 def get_fundamental_data(symbol):
