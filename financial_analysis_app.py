@@ -150,54 +150,7 @@ if symbol:
         eps = net_income / outstanding_shares
 
 
-        def calculate_ratios(annual_balance_sheet_df, annual_income_statement_df, quarterly_balance_sheet_df,
-                             quarterly_income_statement_df, stock_price_data):
-            ratios_dict = {
-                'Year': [],
-                'Current Ratio': [],
-                'Debt Ratio': [],
-                'Net Profit Margin': [],
-                'P/E Ratio': [],
-            }
-
-            for i in range(-5, 0, 1):  # Iterate from -5 to 0 to get the last 5 years
-                # Current Ratio
-                current_assets = float(quarterly_balance_sheet_df['totalCurrentAssets'][i])
-                current_liabilities = float(quarterly_balance_sheet_df['totalCurrentLiabilities'][i])
-                current_ratio = current_assets / current_liabilities if current_liabilities else np.nan
-
-                # Debt Ratio
-                total_debt = float(annual_balance_sheet_df['totalLiabilities'].values[i])
-                total_assets = float(annual_balance_sheet_df['totalAssets'].values[i])
-                debt_ratio = total_debt / total_assets if total_assets else np.nan
-
-                # Net Profit Margin
-                if 'totalRevenue' in quarterly_income_statement_df.columns and 'netIncome' in quarterly_income_statement_df.columns:
-                    revenue = float(quarterly_income_statement_df['totalRevenue'][i])
-                    net_income = float(quarterly_income_statement_df['netIncome'][i])
-                    net_profit_margin = net_income / revenue if revenue else np.nan
-
-                # P/E Ratio
-                net_income = float(annual_income_statement_df['netIncome'].values[i])
-                outstanding_shares = float(annual_balance_sheet_df['commonStockSharesOutstanding'].values[i])
-                eps = net_income / outstanding_shares if outstanding_shares else np.nan
-                pe_ratio = stock_price_data[-1] / eps if eps else np.nan
-
-                # Append data to dictionary
-                year = pd.to_datetime(annual_balance_sheet_df['fiscalDateEnding'].values[i]).year
-                ratios_dict['Year'].append(year)
-                ratios_dict['Current Ratio'].append(current_ratio)
-                ratios_dict['Debt Ratio'].append(debt_ratio)
-                ratios_dict['Net Profit Margin'].append(net_profit_margin)
-                ratios_dict['P/E Ratio'].append(pe_ratio)
-
-            return pd.DataFrame(ratios_dict)
-
-
         #DATAFRAMES
-
-        with st.spinner("Fetching stock price data..."):
-            stock_price_data = get_stock_price_data(symbol)
 
         # Create a DataFrame for financial health ratios
         ratios_df = pd.DataFrame({
@@ -225,57 +178,93 @@ if symbol:
         # Sort the data by fiscalDateEnding in ascending order
         annual_income_statement_df = annual_income_statement_df.sort_values('fiscalDateEnding', ascending=True)
 
+
         #DATAFRAME OVER TIME
 
-        def calculate_ratios(annual_balance_sheet_df, annual_income_statement_df, quarterly_balance_sheet_df,
-                             quarterly_income_statement_df, stock_price_data):
-            ratios_list = []
+        def calculate_ratios(annual_balance_sheet_df, annual_income_statement_df, stock_price_data):
+            ratios_dict = {
+                'Year': [],
+                'Current Ratio': [],
+                'Debt Ratio': [],
+            }
+
+            for i in range(-1, -6, -1):  # Iterate from -1 to -6 to get the last 5 years
+
+                # Current Ratio
+                current_assets = float(annual_balance_sheet_df['totalCurrentAssets'].values[i])
+                current_liabilities = float(annual_balance_sheet_df['totalCurrentLiabilities'].values[i])
+                current_ratio = current_assets / current_liabilities if current_liabilities else np.nan
+
+                # Debt Ratio
+                total_debt = float(annual_balance_sheet_df['totalLiabilities'].values[i])
+                total_assets = float(annual_balance_sheet_df['totalAssets'].values[i])
+                debt_ratio = total_debt / total_assets if total_assets else np.nan
+
+                # Append data to dictionary
+                year = pd.to_datetime(annual_balance_sheet_df['fiscalDateEnding'].values[i]).year
+                ratios_dict['Year'].append(year)
+                ratios_dict['Current Ratio'].append(current_ratio)
+                ratios_dict['Debt Ratio'].append(debt_ratio)
+
+            return pd.DataFrame(ratios_dict)
+
+        # Dataframe
+        ratios_df = calculate_ratios(annual_balance_sheet_df, annual_income_statement_df, stock_price_data)
+
+        # Transpose the DataFrame so that 'Year' becomes the column header
+        ratios_df = ratios_df.set_index('Year').T
+
+        # Convert the year values to integers to remove decimal points
+        ratios_df.columns = ratios_df.columns.astype(int)
+
+        # Display the DataFrame with float data shown to two decimal places
+        st.subheader("Ratios over 5 years")
+        st.dataframe(ratios_df.style.format("{:.2f}"))
+
+
+        #DuPont Analysis
+
+        def calculate_dupont(annual_balance_sheet_df, annual_income_statement_df):
+            dupont_list = []
 
             num_years = min(5, len(annual_balance_sheet_df))
 
             for i in range(-num_years, 0, 1):
                 year = pd.to_datetime(annual_balance_sheet_df['fiscalDateEnding'].values[i]).year
 
-                # Current Ratio
-                current_assets = float(quarterly_balance_sheet_df['totalCurrentAssets'].values[i])
-                current_liabilities = float(quarterly_balance_sheet_df['totalCurrentLiabilities'].values[i])
-                current_ratio = current_assets / current_liabilities if current_liabilities else np.nan
-                ratios_list.append(['Current Ratio', year, current_ratio])
+                # Profit Margin
+                if 'totalRevenue' in annual_income_statement_df.columns and 'netIncome' in annual_income_statement_df.columns:
+                    revenue = float(annual_income_statement_df['totalRevenue'].values[i])
+                    net_income = float(annual_income_statement_df['netIncome'].values[i])
+                    profit_margin = net_income / revenue if revenue else np.nan
+                    dupont_list.append(['Profit Margin', year, profit_margin])
 
-                # Debt Ratio
-                total_debt = float(annual_balance_sheet_df['totalLiabilities'].values[i])
+                # Total Asset Turnover
                 total_assets = float(annual_balance_sheet_df['totalAssets'].values[i])
-                debt_ratio = total_debt / total_assets if total_assets else np.nan
-                ratios_list.append(['Debt Ratio', year, debt_ratio])
+                asset_turnover = revenue / total_assets if total_assets else np.nan
+                dupont_list.append(['Asset Turnover', year, asset_turnover])
 
-                # Net Profit Margin
-                if 'totalRevenue' in quarterly_income_statement_df.columns and 'netIncome' in quarterly_income_statement_df.columns:
-                    revenue = float(quarterly_income_statement_df['totalRevenue'].values[i])
-                    net_income = float(quarterly_income_statement_df['netIncome'].values[i])
-                    net_profit_margin = net_income / revenue if revenue else np.nan
-                    ratios_list.append(['Net Profit Margin', year, net_profit_margin])
+                # Financial Leverage
+                shareholder_equity = float(annual_balance_sheet_df['totalShareholderEquity'].values[i])
+                financial_leverage = total_assets / shareholder_equity if shareholder_equity else np.nan
+                dupont_list.append(['Financial Leverage', year, financial_leverage])
 
-                # P/E Ratio
-                net_income = float(annual_income_statement_df['netIncome'].values[i])
-                outstanding_shares = float(annual_balance_sheet_df['commonStockSharesOutstanding'].values[i])
-                eps = net_income / outstanding_shares if outstanding_shares else np.nan
-                pe_ratio = stock_price_data[-num_years] / eps if eps else np.nan
-                ratios_list.append(['P/E Ratio', year, pe_ratio])
+                # ROE
+                roe = profit_margin * asset_turnover * financial_leverage
+                dupont_list.append(['Return on Equity (ROE)', year, roe])
 
-            return pd.DataFrame(ratios_list, columns=['Ratio', 'Year', 'Value'])
+            return pd.DataFrame(dupont_list, columns=['Ratio', 'Year', 'Value'])
 
 
-        #Dataframe
-        # Call the calculate_ratios function
-        ratios_df = calculate_ratios(annual_balance_sheet_df, annual_income_statement_df, quarterly_balance_sheet_df,
-                                     quarterly_income_statement_df, stock_price_data)
+        # Call the calculate_dupont function
+        dupont_df = calculate_dupont(annual_balance_sheet_df, annual_income_statement_df)
 
         # Reshape the DataFrame
-        ratios_df = ratios_df.pivot(index='Ratio', columns='Year', values='Value')
+        dupont_df = dupont_df.pivot(index='Ratio', columns='Year', values='Value')
 
         # Display the DataFrame with float data shown to two decimal places.
-        st.subheader("Ratios over 5 years")
-        st.dataframe(ratios_df.style.format("{:.2f}"))
+        st.subheader("DuPont Analysis over 5 years")
+        st.dataframe(dupont_df.style.format("{:.2f}"))
 
 
         # VISUALISATIONS
@@ -386,8 +375,6 @@ if symbol:
 
         formatter = FuncFormatter(format_y_axis)
 
-
-        # Define a function to annotate the data points
         # Define a function to annotate the data points
         def annotate_data_points2(ax, x_points, y_points, color, y_offset, x_offset=0, fontsize=10):
             for x, y in zip(x_points, y_points):
