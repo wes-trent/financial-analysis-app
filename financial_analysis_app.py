@@ -316,22 +316,14 @@ if symbol:
         # Format numbers in billions
         def format_billions(x):
             if abs(x) >= 1_000_000_000:
-                if abs(x) % 1_000_000_000 == 0:
-                    return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000_000:.0f}(B)'
-                else:
-                    return f'{"-" if x < 0 else ""}{abs(x) / 1_000_000_000:.2f}(B)'
+                return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000_000:.0f}(B)'
             elif abs(x) >= 1_000_000:
-                if abs(x) % 1_000_000 == 0:
-                    return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000:.0f}(M)'
-                else:
-                    return f'{"-" if x < 0 else ""}{abs(x) / 1_000_000:.2f}(M)'
+                return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000:.0f}(M)'
             elif abs(x) >= 1_000:
-                if abs(x) % 1_000 == 0:
-                    return f'{"-" if x < 0 else ""}{abs(x) // 1_000:.0f}(K)'
-                else:
-                    return f'{"-" if x < 0 else ""}{abs(x) / 1_000:.2f}(K)'
+                return f'{"-" if x < 0 else ""}{abs(x) // 1_000:.0f}(K)'
             else:
-                return str(x)
+                return str(int(x))
+
 
         # Create a function to annotate data points
         def annotate_data_points(ax, df, y_col):
@@ -394,10 +386,13 @@ if symbol:
 
         formatter = FuncFormatter(format_y_axis)
 
+
         # Define a function to annotate the data points
-        def annotate_data_points2(ax, x_points, y_points, color, y_offset, x_offset=0):
+        # Define a function to annotate the data points
+        def annotate_data_points2(ax, x_points, y_points, color, y_offset, x_offset=0, fontsize=10):
             for x, y in zip(x_points, y_points):
-                ax.text(x + x_offset, float(y) + y_offset, format_billions(y), color=color, ha='center', va='bottom')
+                ax.text(x + x_offset, float(y) + y_offset, format_billions(int(y)), color=color, ha='center',
+                        va='bottom', fontsize=fontsize)
 
         # Sort the dataframe in descending order
         quarterly_income_statement_df = quarterly_income_statement_df.sort_index(ascending=False)
@@ -444,10 +439,10 @@ if symbol:
         plt.gca().yaxis.set_major_formatter(formatter)
 
         # Annotate data points for Revenue
-        annotate_data_points2(plt.gca(), np.arange(len(quarters)) - 0.2, df_revenue['Amount'].values, 'black', 0.8)
+        annotate_data_points2(plt.gca(), np.arange(len(quarters)) - 0.2, df_revenue['Amount'].values, 'black', 0.8, fontsize=10)
 
         # Annotate data points for Net Income
-        annotate_data_points2(plt.gca(), np.arange(len(quarters)) + 0.23, df_net_income['Amount'].values, 'black', 0.8)
+        annotate_data_points2(plt.gca(), np.arange(len(quarters)) + 0.25, df_net_income['Amount'].values, 'black', 0.8, fontsize=10)
 
         # Change x-axis labels to quarter format
         plt.xticks(range(8), quarter_labels)
@@ -474,14 +469,14 @@ if symbol:
 
 
         # Define a function to annotate the data points
-        def annotate_data_points(ax, x_points, y_points, color, y_offset, fontsize=12):  # set default fontsize to 12
+        def annotate_data_points(ax, x_points, y_points, color, y_offset, fontsize=12):
             bar_width = 0.8  # default bar width in seaborn
             for x, y in zip(x_points, y_points):
                 if y < 0:  # check if the value is negative
-                    ax.text(x - bar_width / 2, y - y_offset, format_billions(abs(y)), color=color, ha='center',
+                    ax.text(x - bar_width / 2, y - y_offset, format_billions(int(y)), color=color, ha='center',
                             va='top', fontsize=fontsize)
                 else:
-                    ax.text(x - bar_width / 2, y + y_offset, format_billions(abs(y)), color=color, ha='center',
+                    ax.text(x - bar_width / 2, y + y_offset, format_billions(int(y)), color=color, ha='center',
                             va='bottom', fontsize=fontsize)
 
 
@@ -524,13 +519,13 @@ if symbol:
         plt.legend(title='Type')
 
         # Annotate data points for Operating Cashflow
-        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.12, df_operating['Cashflow'].values, 'black', 0.2, fontsize=8)
+        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.13, df_operating['Cashflow'].values, 'black', 0.2, fontsize=10)
 
         # Annotate data points for Investing Cashflow
-        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.4, df_investing['Cashflow'].values, 'black', 0.2, fontsize=8)
+        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.4, df_investing['Cashflow'].values, 'black', 0.2, fontsize=10)
 
         # Annotate data points for Financing Cashflow
-        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.68, df_financing['Cashflow'].values, 'black', 0.2, fontsize=8)
+        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.67, df_financing['Cashflow'].values, 'black', 0.2, fontsize=10)
 
         # Set Y-axis formatting
         plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: format_billions(x)))
