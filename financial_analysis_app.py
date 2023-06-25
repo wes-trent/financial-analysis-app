@@ -160,7 +160,7 @@ if symbol:
                 'P/E Ratio': [],
             }
 
-            for i in range(-5, 0, 1):  # We iterate from -5 to 0 to get the last 5 years
+            for i in range(-5, 0, 1):  # Iterate from -5 to 0 to get the last 5 years
                 # Current Ratio
                 current_assets = float(quarterly_balance_sheet_df['totalCurrentAssets'][i])
                 current_liabilities = float(quarterly_balance_sheet_df['totalCurrentLiabilities'][i])
@@ -474,15 +474,15 @@ if symbol:
 
 
         # Define a function to annotate the data points
-        def annotate_data_points(ax, x_points, y_points, color, y_offset):
+        def annotate_data_points(ax, x_points, y_points, color, y_offset, fontsize=12):  # set default fontsize to 12
             bar_width = 0.8  # default bar width in seaborn
             for x, y in zip(x_points, y_points):
                 if y < 0:  # check if the value is negative
                     ax.text(x - bar_width / 2, y - y_offset, format_billions(abs(y)), color=color, ha='center',
-                            va='top')
+                            va='top', fontsize=fontsize)
                 else:
                     ax.text(x - bar_width / 2, y + y_offset, format_billions(abs(y)), color=color, ha='center',
-                            va='bottom')
+                            va='bottom', fontsize=fontsize)
 
 
         # Fetching the cashflow data for the last 5 years
@@ -524,13 +524,13 @@ if symbol:
         plt.legend(title='Type')
 
         # Annotate data points for Operating Cashflow
-        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.13, df_operating['Cashflow'].values, 'black', 0.2)
+        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.12, df_operating['Cashflow'].values, 'black', 0.2, fontsize=8)
 
         # Annotate data points for Investing Cashflow
-        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.4, df_investing['Cashflow'].values, 'black', 0.2)
+        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.4, df_investing['Cashflow'].values, 'black', 0.2, fontsize=8)
 
         # Annotate data points for Financing Cashflow
-        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.67, df_financing['Cashflow'].values, 'black', 0.2)
+        annotate_data_points(plt.gca(), np.arange(len(cashflows)) + 0.68, df_financing['Cashflow'].values, 'black', 0.2, fontsize=8)
 
         # Set Y-axis formatting
         plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: format_billions(x)))
