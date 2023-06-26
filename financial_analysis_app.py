@@ -593,4 +593,4 @@ if symbol:
     except ValueError as e:
         st.error(str(e))
 else:
-    st.write('Please enter a stock symbol.')
+    st.write("(example: type 'AAPL' and press Enter)")
