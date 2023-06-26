@@ -1,8 +1,8 @@
 # Financial Analysis App
 
-This is a repository for the Financial Analysis App. The app uses the Alpha Vantage API to fetch and visualize various types of financial data. It provides various ratios and charts for the specified U.S. equity. Simply type in the stock ticker (uppercase or lowercase), and hit enter (example: AAPL).
+Check out the app [HERE](https://financial-analysis-app-wes-trent.streamlit.app/). Running this cloud version may run into API call limits or other errors.
 
-Check out the app [here](https://financial-analysis-app-wes-trent.streamlit.app/). Running this cloud version may run into API call limits or other errors.
+This is a repository for the Financial Analysis App. The app uses the Alpha Vantage API to fetch and visualize various types of financial data. It provides various ratios and charts for the specified U.S. equity. Simply type in the stock ticker (uppercase or lowercase), and hit enter (example: AAPL).
 
 This is an early version, and includes fairly basic information. It is built for clarity and easy customization for the addition of new ratios, charts, and features.
 As the code has gone through many different iterations, some parts of the code may be arbitrary or unoptimized. This will be improved over time.
@@ -12,8 +12,8 @@ The app is meant to provide information for educational and research purposes. I
 
 ## Features
 
+- Company Overview
 - Financial Health Ratios
-- Financial Performance Ratios
 - Ratios Over Time
 - Stock Price Chart
 - Revenue vs Net Income
@@ -28,7 +28,7 @@ You can get your own free API key from [Alpha Vantage](https://www.alphavantage.
 
 ## Getting Started
 
-Feel free to test out a live version of this app [here](https://financial-analysis-app-wes-trent.streamlit.app/). Note that this app is using a free API, and therefore
+Feel free to test out a live version of this [app](https://financial-analysis-app-wes-trent.streamlit.app/). Note that this app is using a free API, and therefore
 will run into API call limits if there are concurrent users.
 
 It is recommended to run the app locally, allowing for the addition of any ratios or charts you want to add to your own version.
