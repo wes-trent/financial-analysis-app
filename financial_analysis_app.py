@@ -9,6 +9,7 @@ import pandas as pd
 import seaborn as sns
 import yfinance as yf
 import os
+import requests
 
 # Add a title to the Streamlit app
 st.title("Financial Analysis App")
@@ -49,6 +50,26 @@ def get_stock_price_data(symbol):
     except ValueError:
         raise ValueError(f"No price data found for the symbol: {symbol}. Please try another symbol.")
 
+@st.cache_resource
+def get_company_overview(symbol):
+    url = f'https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}&apikey={API_KEY}'
+    r = requests.get(url)
+    time.sleep(12)
+    data = r.json()
+    return data
+
+
+# Format numbers in billions
+def format_billions(x):
+    if abs(x) >= 1_000_000_000:
+        return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000_000:.0f}(B)'
+    elif abs(x) >= 1_000_000:
+        return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000:.0f}(M)'
+    elif abs(x) >= 1_000:
+        return f'{"-" if x < 0 else ""}{abs(x) // 1_000:.0f}(K)'
+    else:
+        return str(int(x))
+
 # User input for stock symbol
 symbol = st.text_input("Enter stock symbol:")
 if symbol:
@@ -58,6 +79,7 @@ if symbol:
         with st.spinner("Fetching data..."):
             data = get_fundamental_data(symbol)
             stock_price_data = get_stock_price_data(symbol)
+            company_overview_data = get_company_overview(symbol)
 
         if data is not None and len(data) == 6 and stock_price_data is not None:
             annual_balance_sheet_df, annual_income_statement_df, annual_cash_flow_statement_df, quarterly_balance_sheet_df, quarterly_income_statement_df, quarterly_cash_flow_statement_df = data
@@ -70,6 +92,61 @@ if symbol:
             quarterly_balance_sheet_df.fillna(0, inplace=True)
             quarterly_income_statement_df.fillna(0, inplace=True)
             quarterly_cash_flow_statement_df.fillna(0, inplace=True)
+
+
+        # START VISUAL ANALYSIS
+
+            def display_company_overview(overview_data, latest_price, symbol):
+                st.markdown(f"<h2 style='text-align: center; margin-bottom: 1px;'>Overview of {symbol}</h2>",
+                            unsafe_allow_html=True)
+
+                col1, spacer, col2 = st.columns([1, 0.1, 1])  # Create a spacer column with 10% of the total width
+
+                # Column 1
+                col1.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Most Recent Price: </b></p><p style="font-size:18px; font-weight:bold; color:white">${latest_price:.2f}</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col1.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Analyst Target Price: </b></p><p style="font-size:18px; font-weight:bold; color:white">${float(overview_data["AnalystTargetPrice"]):.2f}</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col1.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Market Capitalization: </b></p><p style="font-size:18px; font-weight:bold; color:white">{format_billions(float(overview_data["MarketCapitalization"]))}</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col1.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Dividend Yield: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["DividendYield"]) * 100:.2f}%</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col1.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Profit Margin: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["ProfitMargin"]) * 100:.2f}%</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col1.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>PEG Ratio: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["PEGRatio"]):.2f}</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+
+                # Column 2
+                col2.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Quarterly Revenue Growth YOY: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["QuarterlyRevenueGrowthYOY"]) * 100:.2f}%</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col2.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Quarterly Earnings Growth YOY: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["QuarterlyEarningsGrowthYOY"]) * 100:.2f}%</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col2.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Trailing PE: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["TrailingPE"]):.2f}</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col2.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Forward PE: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["ForwardPE"]):.2f}</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col2.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Operating Margin TTM: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["OperatingMarginTTM"]) * 100:.2f}%</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+                col2.markdown(
+                    f'<div style="display: flex; justify-content: space-between; margin-top:18px;"><p style="font-size:17px; color: lightgrey"><b>Return On Equity TTM: </b></p><p style="font-size:18px; font-weight:bold; color:white">{float(overview_data["ReturnOnEquityTTM"]) * 100:.2f}%</p></div><hr style="border:1px solid #C0C0C0; margin:0;">',
+                    unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Display company overview
+            latest_price = stock_price_data[-1]  # Get the most recent price
+            display_company_overview(company_overview_data, latest_price, symbol)
 
 
         # CALCULATE FINANCIAL RATIOS
@@ -164,16 +241,16 @@ if symbol:
         st.table(ratios_df)
 
         # Create a DataFrame for financial performance ratios
-        ratios2_df = pd.DataFrame({
-            'Ratios': ['Net Profit Margin', 'Operating Cash Flow Ratio',
-                       'Earnings Per Share', 'P/E Ratio',  'Annual Dividend Yield'],
-            'Values': [f"{net_profit_margin:.2f}", f"{operating_cash_flow_ratio:.2f}",
-                       f"{eps:.2f}", f"{pe_ratio:.2f}", f"{annual_dividend_yield*100:.2f}%"]
-        }).set_index('Ratios')
+        # ratios2_df = pd.DataFrame({
+        #    'Ratios': ['Net Profit Margin', 'Operating Cash Flow Ratio',
+        #               'Earnings Per Share', 'P/E Ratio',  'Annual Dividend Yield'],
+        #    'Values': [f"{net_profit_margin:.2f}", f"{operating_cash_flow_ratio:.2f}",
+        #               f"{eps:.2f}", f"{pe_ratio:.2f}", f"{annual_dividend_yield*100:.2f}%"]
+        #}).set_index('Ratios')
 
         # Display the DataFrame as a table
-        st.subheader("Financial Performance Ratios")
-        st.table(ratios2_df)
+        #st.subheader("Financial Performance Ratios")
+        #st.table(ratios2_df)
 
         # Sort the data by fiscalDateEnding in ascending order
         annual_income_statement_df = annual_income_statement_df.sort_values('fiscalDateEnding', ascending=True)
@@ -223,7 +300,6 @@ if symbol:
 
 
         #DuPont Analysis
-
         def calculate_dupont(annual_balance_sheet_df, annual_income_statement_df):
             dupont_list = []
 
@@ -302,17 +378,6 @@ if symbol:
 
         formatter = FuncFormatter(billions)
 
-        # Format numbers in billions
-        def format_billions(x):
-            if abs(x) >= 1_000_000_000:
-                return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000_000:.0f}(B)'
-            elif abs(x) >= 1_000_000:
-                return f'{"-" if x < 0 else ""}{abs(x) // 1_000_000:.0f}(M)'
-            elif abs(x) >= 1_000:
-                return f'{"-" if x < 0 else ""}{abs(x) // 1_000:.0f}(K)'
-            else:
-                return str(int(x))
-
 
         # Create a function to annotate data points
         def annotate_data_points(ax, df, y_col):
@@ -366,7 +431,6 @@ if symbol:
         # Show plots using Streamlit
         st.subheader("Total Revenue and Net Income Over 5 Years")
         st.pyplot(fig)
-
 
         #QUARTERLY BAR CHART-REVENUE VS INCOME
 
@@ -524,6 +588,7 @@ if symbol:
 
         # Displaying the bar chart
         st.pyplot(plt.gcf())
+
 
     except ValueError as e:
         st.error(str(e))
