@@ -12,8 +12,8 @@ The app is meant to provide information for educational and research purposes. I
 
 ## Features
 
+- Company Overview
 - Financial Health Ratios
-- Financial Performance Ratios
 - Ratios Over Time
 - Stock Price Chart
 - Revenue vs Net Income
