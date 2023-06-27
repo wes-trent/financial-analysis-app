@@ -4,6 +4,7 @@ from alpha_vantage.fundamentaldata import FundamentalData
 import time
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 import pandas as pd
 import seaborn as sns
@@ -56,7 +57,10 @@ def get_company_overview(symbol):
     r = requests.get(url)
     time.sleep(12)
     data = r.json()
-    return data
+    # Convert the data to a DataFrame
+    data_df = pd.DataFrame.from_dict(data, orient='index').transpose()
+    data_df.replace(['None', '-'], 0, inplace=True)
+    return data_df
 
 
 # Format numbers in billions
@@ -84,17 +88,27 @@ if symbol:
         if data is not None and len(data) == 6 and stock_price_data is not None:
             annual_balance_sheet_df, annual_income_statement_df, annual_cash_flow_statement_df, quarterly_balance_sheet_df, quarterly_income_statement_df, quarterly_cash_flow_statement_df = data
 
-            # Fill null values with 0
+            # Fill null and none values with 0
             annual_balance_sheet_df.fillna(0, inplace=True)
+            annual_balance_sheet_df.replace('None', 0, inplace=True)
+
             annual_income_statement_df.fillna(0, inplace=True)
+            annual_income_statement_df.replace('None', 0, inplace=True)
+
             annual_cash_flow_statement_df.fillna(0, inplace=True)
+            annual_cash_flow_statement_df.replace('None', 0, inplace=True)
 
             quarterly_balance_sheet_df.fillna(0, inplace=True)
+            quarterly_balance_sheet_df.replace('None', 0, inplace=True)
+
             quarterly_income_statement_df.fillna(0, inplace=True)
+            quarterly_income_statement_df.replace('None', 0, inplace=True)
+
             quarterly_cash_flow_statement_df.fillna(0, inplace=True)
+            quarterly_cash_flow_statement_df.replace('None', 0, inplace=True)
 
 
-        # START VISUAL ANALYSIS
+            # START VISUAL ANALYSIS
 
             def display_company_overview(overview_data, latest_price, symbol):
                 st.markdown(f"<h2 style='text-align: center; margin-bottom: 1px;'>Overview of {symbol}</h2>",
@@ -303,7 +317,7 @@ if symbol:
         def calculate_dupont(annual_balance_sheet_df, annual_income_statement_df):
             dupont_list = []
 
-            num_years = min(5, len(annual_balance_sheet_df))
+            num_years = min(5, len(annual_balance_sheet_df), len(annual_income_statement_df))
 
             for i in range(-num_years, 0, 1):
                 year = pd.to_datetime(annual_balance_sheet_df['fiscalDateEnding'].values[i]).year
@@ -345,16 +359,6 @@ if symbol:
 
         # VISUALISATIONS
 
-        plt.style.use('ggplot')
-
-        # Data for Total Revenue plot
-        x = pd.to_datetime(annual_income_statement_df['fiscalDateEnding'])
-        y1 = annual_income_statement_df['totalRevenue'].astype(float)
-
-        # Data for Net Income plot
-        y2 = annual_income_statement_df['netIncome'].astype(float)
-
-
         # Function to convert large numbers into strings with 'B' or 'M' suffixes
         def billions(x, pos):
             'The two args are the value and tick position'
@@ -378,59 +382,57 @@ if symbol:
 
         formatter = FuncFormatter(billions)
 
+        plt.style.use('ggplot')
+
+        # Data for Total Revenue plot
+        x = pd.to_datetime(annual_income_statement_df['fiscalDateEnding'])
+        y1 = annual_income_statement_df['totalRevenue'].astype(float)
+
+        # Data for Net Income plot
+        y2 = annual_income_statement_df['netIncome'].astype(float)
 
         # Create a function to annotate data points
         def annotate_data_points(ax, df, y_col):
             for x, y in zip(df['fiscalDateEnding'], df[y_col]):
                 ax.text(x, y + 0.05 * y, format_billions(y), color='black', ha='center', va='bottom')
 
-        # Create a figure with multiple subplots
-        fig, axs = plt.subplots(2, 1, figsize=(12, 10), dpi=100)
+
+        # Create a figure for the plot
+        fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
+
+        # Convert fiscalDateEnding to datetime
+        annual_income_statement_df['fiscalDateEnding'] = pd.to_datetime(annual_income_statement_df['fiscalDateEnding'])
 
         # Plot for Total Revenue
-        sns.lineplot(x='fiscalDateEnding', y='totalRevenue',
-                     data=annual_income_statement_df.astype({'totalRevenue': 'float'}), ax=axs[0], marker='o')
-        axs[0].xaxis.set_major_locator(plt.MaxNLocator(5))
-        axs[0].yaxis.set_major_formatter(formatter)
-        axs[0].set_xlabel('Year')
-        axs[0].set_ylabel('Total Revenue ($)')
-        axs[0].set_title('Total Annual Revenue', fontsize=20, pad=12)
-        axs[0].set_ylim(bottom=0)
-        axs[0].tick_params(axis='x')
-        annotate_data_points(axs[0], annual_income_statement_df.astype({'totalRevenue': 'float'}),
-                             'totalRevenue')
+        sns.lineplot(x='fiscalDateEnding',
+                     y='totalRevenue',
+                     data=annual_income_statement_df.astype({'totalRevenue': 'float'}),
+                     ax=ax, marker='o', color='blue', label='Total Revenue')
+        annotate_data_points(ax, annual_income_statement_df.astype({'totalRevenue': 'float'}), 'totalRevenue')
 
         # Plot for Net Income
-        sns.lineplot(x='fiscalDateEnding', y='netIncome',
-                     data=annual_income_statement_df.astype({'netIncome': 'float'}), ax=axs[1], marker='o')
-        axs[1].xaxis.set_major_locator(plt.MaxNLocator(5))
-        axs[1].yaxis.set_major_formatter(formatter)
-        axs[1].set_xlabel('Year')
-        axs[1].set_ylabel('Net Income ($)')
-        axs[1].set_title('Annual Net Income', fontsize=20, pad=12)
-        axs[1].set_ylim(bottom=0)
-        axs[1].tick_params(axis='x')
-        annotate_data_points(axs[1], annual_income_statement_df.astype({'netIncome': 'float'}),
-                             'netIncome')
+        sns.lineplot(x='fiscalDateEnding',
+                     y='netIncome',
+                     data=annual_income_statement_df.astype({'netIncome': 'float'}),
+                     ax=ax, marker='o', color='orange', label='Net Income')
+        annotate_data_points(ax, annual_income_statement_df.astype({'netIncome': 'float'}), 'netIncome')
 
-        # Add space between subplots
-        plt.subplots_adjust(hspace=0.3, top=1.0)
+        # Set plot details
+        ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.yaxis.set_major_formatter(formatter)
+        ax.set_xlabel('Year')
+        ax.set_ylabel('Value ($)')
+        ax.set_title('Total Annual Revenue and Net Income', fontsize=20, pad=12)
+        ax.set_ylim(bottom=None)
+        ax.tick_params(axis='x')
 
-        # Create a seaborn lineplot
-        plt.figure(figsize=(10, 6))
-        sns.lineplot(data=stock_price_data)
-        plt.title(f'{symbol} Stock Price Over the Last 5 Years', fontsize=20, pad=15)
-        plt.xlabel('Date', fontsize=14)
-        plt.ylabel('Stock Price ($)', fontsize=14)
-        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-        plt.gca().xaxis.set_major_locator(mdates.YearLocator())
-        plt.tight_layout()
+        # Add legend
+        ax.legend()
 
-        st.pyplot(plt.gcf())  # Display the plot in the Streamlit app
-
-        # Show plots using Streamlit
+        # Show the plot
         st.subheader("Total Revenue and Net Income Over 5 Years")
         st.pyplot(fig)
+
 
         #QUARTERLY BAR CHART-REVENUE VS INCOME
 
@@ -442,8 +444,12 @@ if symbol:
         # Define a function to annotate the data points
         def annotate_data_points2(ax, x_points, y_points, color, y_offset, x_offset=0, fontsize=10):
             for x, y in zip(x_points, y_points):
+                va = 'bottom' if y >= 0 else 'top'  # Vertical alignment
+                y_offset = abs(y_offset)  # Make sure y_offset is positive
+                y_offset = y_offset if y >= 0 else -y_offset  # If y is negative, make the offset negative
                 ax.text(x + x_offset, float(y) + y_offset, format_billions(int(y)), color=color, ha='center',
-                        va='bottom', fontsize=fontsize)
+                        va=va, fontsize=fontsize)
+
 
         # Sort the dataframe in descending order
         quarterly_income_statement_df = quarterly_income_statement_df.sort_index(ascending=False)
@@ -457,9 +463,6 @@ if symbol:
         # Fetching the revenue and net income data for the last 8 quarters
         revenue = quarterly_income_statement_df['totalRevenue'].values[-8:].astype(float)
         net_income = quarterly_income_statement_df['netIncome'].values[-8:].astype(float)
-
-        # Setting the figure size
-        plt.figure(figsize=(12, 8))
 
         # Create a DataFrame for seaborn
         df_revenue = pd.DataFrame({
@@ -477,14 +480,34 @@ if symbol:
         # Combining both dataframes
         df_combined = pd.concat([df_revenue, df_net_income])
 
+        # Assign 'Revenue', 'Net Income - Positive' or 'Net Income - Negative' based on the value
+        df_combined['Type_Color'] = np.where(df_combined['Amount'] >= 0, df_combined['Type'],
+                                             df_combined['Type'] + ' - Negative')
+
+        plt.figure(figsize=(12, 8))
+
         # Create a seaborn barplot
-        sns.barplot(x='Quarter', y='Amount', hue='Type', data=df_combined, palette=['blue', 'green'])
+        barplot = sns.barplot(x='Quarter', y='Amount', hue='Type', data=df_combined)
+
+        # Set bar color based on value and hue
+        colors = {'Revenue': ['blue', 'red'], 'Net Income': ['green', 'red']}
+        hues = df_combined['Type'].values
+        for bar, hue in zip(barplot.patches, hues):
+            color_index = 0 if bar.get_height() >= 0 else 1
+            bar.set_color(colors[hue][color_index])
+
+        # Remove original legend
+        barplot.get_legend().remove()
+
+        legend_elements = [Patch(facecolor='blue', label='Revenue'),
+                           Patch(facecolor='green', label='Net Income - Positive'),
+                           Patch(facecolor='red', label='Net Income - Negative')]
+        plt.legend(handles=legend_elements, title='Type', loc='upper left')
 
         # Adding title and labels
         plt.title(f'Revenue vs Net Income for last 8 Quarters for {symbol}', fontsize=20, pad=15)
         plt.ylabel('Amount ($)', fontsize=15)
         plt.xlabel('Quarter', fontsize=15)
-        plt.legend(title='Type')
 
         # Set y-axis formatter
         plt.gca().yaxis.set_major_formatter(formatter)
@@ -499,7 +522,8 @@ if symbol:
         plt.xticks(range(8), quarter_labels)
 
         # Adjust y limit
-        plt.ylim([0, max(max(revenue), max(net_income)) * 1.1])  # gives 10% extra room at the top
+        plt.ylim([min(min(revenue), min(net_income)) * 1.1,
+                  max(max(revenue), max(net_income)) * 1.1])  # Adjusts for both top and bottom
 
         # Displaying the bar chart
         st.pyplot(plt.gcf())
