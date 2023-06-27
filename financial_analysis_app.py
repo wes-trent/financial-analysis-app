@@ -384,6 +384,19 @@ if symbol:
 
         plt.style.use('ggplot')
 
+        # Price over 5 Years Chart
+        # Create a seaborn lineplot
+        plt.figure(figsize=(10, 6))
+        sns.lineplot(data=stock_price_data)
+        plt.title(f'{symbol} Stock Price Over the Last 5 Years', fontsize=20, pad=15)
+        plt.xlabel('Date', fontsize=14)
+        plt.ylabel('Stock Price ($)', fontsize=14)
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        plt.gca().xaxis.set_major_locator(mdates.YearLocator())
+        plt.tight_layout()
+
+        st.pyplot(plt.gcf())  # Display the plot in the Streamlit app
+
         # Data for Total Revenue plot
         x = pd.to_datetime(annual_income_statement_df['fiscalDateEnding'])
         y1 = annual_income_statement_df['totalRevenue'].astype(float)
